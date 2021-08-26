@@ -185,10 +185,22 @@ export abstract class TSViewBase extends BigTableView {
     public saveAs(schema: SchemaClass, fileKind: DataKinds): void {
         const dialog = new Dialog("Save as " + fileKind + " files",
             "Describe the set of files where data will be saved.");
-        const label = fileKind == "db" ? "Table" : "Folder";
-        const value = fileKind == "db" ? "table" : "/";
-        const help = fileKind == "db" ? "Table to save data to" :
-            "All files will be written to this folder on each of the remote machines.";
+        var label, value, help;
+
+        if (fileKind == "db") {
+            label = "Table";
+            value = "table";
+            help = "Table to save data to.";
+        } else if (fileKind == "delta") {
+            label = "Path";
+            value = "/";  // TODO: autofill HDFS path
+            help = "Path to the Delta table."
+        } else {
+            label = "Folder";
+            value = "/";
+            help = "All files will be written to this folder on each of the remote machines."
+        }
+
         const folder = dialog.addTextField("folderName", label, FieldKind.String, value, help);
         folder.required = true;
         dialog.setCacheTitle("saveAsDialog");
@@ -386,7 +398,11 @@ export abstract class TSViewBase extends BigTableView {
                     text: "Save as DB table...",
                     action: () => this.saveAs(this.getSchema(), "db"),
                     help: "Save the data to a table in the original database.",
-                },
+                }, {
+                    text: "Save as Delta table...",
+                    action: () => this.saveAs(this.getSchema(), "delta"),
+                    help: "Save the data to a Delta table.",
+                }
             ]),
         };
     }

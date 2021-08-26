@@ -18,6 +18,9 @@
 package org.hillview.targets;
 
 import com.google.gson.JsonObject;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.hillview.*;
 import org.hillview.dataStructures.*;
 import org.hillview.dataset.ParallelDataSet;
@@ -170,15 +173,36 @@ public class TableTarget extends TableRpcTarget {
     }
 
     @HillviewRpc
-    public void saveAs(RpcRequest request, RpcRequestContext context) {
-        SaveAsArgs args = request.parseArgs(SaveAsArgs.class);
-        if (args.fileKind.equals("db")) {
-            // TODO: currently this is hardwired for greenplum
-            args.folder = Paths.get(Configuration.instance.getGreenplumDumpDirectory(), args.folder).toString();
+    public void saveAs(RpcRequest request, RpcRequestContext context) throws IOException {
+    SaveAsArgs args = request.parseArgs(SaveAsArgs.class);
+        if (args.fileKind.equals("delta")) {
+            // First the root node should make sure that the path doesn't exist or is an empty folder
+            Path deltaTablePath = new Path(args.folder);
+            org.apache.hadoop.conf.Configuration hadoopConf = HDFSUtils.getDefaultHadoopConfiguration();
+            FileSystem fs = deltaTablePath.getFileSystem(hadoopConf);
+            if (!fs.exists(deltaTablePath)) {
+                fs.mkdirs(deltaTablePath);
+            }
+            if (!HDFSUtils.isEmptyDir(fs, deltaTablePath)) {
+                throw new RuntimeException("The path provided is not an empty directory");
+            }
+
+            // Create a tmp dir inside the provided path for workers to write parquet files to
+            Path tempDir = new Path(deltaTablePath, "tmp");
+            fs.mkdirs(tempDir);
+            // Don't write schema here since multiple workers will be writing to the same directory
+            SaveAsFileSketch sk = new SaveAsFileSketch(
+                    "parquet", tempDir.toString(), args.schema, false);
+            this.runCompleteSketch(this.table, sk, request, context);
+        } else {
+            if (args.fileKind.equals("db")) {
+                // TODO: currently this is hardwired for greenplum
+                args.folder = Paths.get(Configuration.instance.getGreenplumDumpDirectory(), args.folder).toString();
+            }
+            SaveAsFileSketch sk = new SaveAsFileSketch(
+                    args.fileKind, args.folder, args.schema, true);
+            this.runCompleteSketch(this.table, sk, request, context);
         }
-        SaveAsFileSketch sk = new SaveAsFileSketch(
-                args.fileKind, args.folder, args.schema, true);
-        this.runCompleteSketch(this.table, sk, request, context);
     }
 
     static class QuantilesVectorInfo extends HistogramInfo {

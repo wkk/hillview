@@ -22,6 +22,7 @@ import org.hillview.dataset.api.TableSketch;
 import org.hillview.storage.CsvFileWriter;
 import org.hillview.storage.ITableWriter;
 import org.hillview.storage.OrcFileWriter;
+import org.hillview.storage.ParquetFileWriter;
 import org.hillview.table.Schema;
 import org.hillview.table.api.ITable;
 import org.hillview.utils.Converters;
@@ -97,6 +98,9 @@ public class SaveAsFileSketch implements TableSketch<Empty> {
                     break;
                 case "csv":
                     writer = new CsvFileWriter(path);
+                    break;
+                case "parquet":
+                    writer = new ParquetFileWriter(path);
                     break;
                 default:
                     throw new RuntimeException("Unknown file kind: " + kind);

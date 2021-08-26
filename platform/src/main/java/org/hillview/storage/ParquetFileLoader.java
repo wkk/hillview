@@ -45,6 +45,7 @@ import org.hillview.table.Table;
 import org.hillview.table.api.*;
 import org.hillview.table.columns.BaseListColumn;
 import org.hillview.utils.Converters;
+import org.hillview.utils.HDFSUtils;
 import org.hillview.utils.HillviewLogger;
 import org.hillview.utils.Linq;
 
@@ -67,12 +68,10 @@ public class ParquetFileLoader extends TextFileLoader {
         super(filename);
         this.path = new Path(this.filename);
         this.lazy = lazy;
-        this.configuration = new Configuration();
+        this.configuration = HDFSUtils.getDefaultHadoopConfiguration();
         System.setProperty("hadoop.home.dir", "/");
         this.configuration.set("hadoop.security.authentication", "simple");
         this.configuration.set("hadoop.security.authorization", "false");
-        this.configuration.set("fs.hdfs.impl", org.apache.hadoop.hdfs.DistributedFileSystem.class.getName());
-        this.configuration.set("fs.file.impl", org.apache.hadoop.fs.LocalFileSystem.class.getName());
 
         try {
             ParquetReadOptions.Builder builder = new ParquetReadOptions.Builder();

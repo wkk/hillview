@@ -31,6 +31,7 @@ import org.hillview.table.Table;
 import org.hillview.table.api.*;
 import org.hillview.table.columns.BaseListColumn;
 import org.hillview.utils.Converters;
+import org.hillview.utils.HDFSUtils;
 import org.hillview.utils.Linq;
 
 import javax.annotation.Nullable;
@@ -64,10 +65,7 @@ public class OrcFileLoader extends TextFileLoader {
         super(path);
         this.lazy = lazy;
         this.lzschema = lzschema;
-        this.conf = new Configuration();
-        // https://stackoverflow.com/questions/17265002/hadoop-no-filesystem-for-scheme-file
-        conf.set("fs.hdfs.impl", org.apache.hadoop.hdfs.DistributedFileSystem.class.getName());
-        conf.set("fs.file.impl", org.apache.hadoop.fs.LocalFileSystem.class.getName());
+        this.conf = HDFSUtils.getDefaultHadoopConfiguration();
     }
 
     private boolean[] project(List<String> columns) {

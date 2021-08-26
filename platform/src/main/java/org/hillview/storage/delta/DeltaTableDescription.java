@@ -2,6 +2,8 @@ package org.hillview.storage.delta;
 
 import io.delta.standalone.DeltaLog;
 import io.delta.standalone.Snapshot;
+import org.apache.hadoop.conf.Configuration;
+import org.hillview.utils.HDFSUtils;
 
 import javax.annotation.Nullable;
 import java.io.Serializable;
@@ -19,9 +21,7 @@ public class DeltaTableDescription implements Serializable {
     public Long snapshotVersion;
 
     public List<String> getFiles() {
-        org.apache.hadoop.conf.Configuration conf = new org.apache.hadoop.conf.Configuration();
-        conf.set("fs.hdfs.impl", org.apache.hadoop.hdfs.DistributedFileSystem.class.getName());
-        conf.set("fs.file.impl", org.apache.hadoop.fs.LocalFileSystem.class.getName());
+        Configuration conf = HDFSUtils.getDefaultHadoopConfiguration();
 
         DeltaLog log = DeltaLog.forTable(conf, path);
         Snapshot snapshot = null;

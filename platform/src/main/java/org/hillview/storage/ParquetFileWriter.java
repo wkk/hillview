@@ -1,6 +1,7 @@
 package org.hillview.storage;
 
 import org.apache.avro.generic.GenericData;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.parquet.avro.AvroParquetWriter;
 import org.apache.parquet.avro.AvroSchemaConverter;
@@ -15,6 +16,7 @@ import org.hillview.table.api.IColumn;
 import org.hillview.table.api.IRowIterator;
 import org.hillview.table.api.ITable;
 import org.hillview.utils.Converters;
+import org.hillview.utils.HDFSUtils;
 
 import java.io.IOException;
 import java.time.ZoneOffset;
@@ -85,8 +87,10 @@ public class ParquetFileWriter implements ITableWriter {
         List<IColumn> cols = table.getLoadedColumns(table.getSchema().getColumnNames());
 
         try {
+            Configuration conf = HDFSUtils.getDefaultHadoopConfiguration();
             ParquetWriter<GenericData.Record> writer = AvroParquetWriter.<GenericData.Record>builder(new Path(filepath))
                     .withSchema(avroSchema)
+                    .withConf(conf)
                     .build();
 
             IRowIterator iterator = table.getMembershipSet().getIterator();

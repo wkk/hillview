@@ -25,7 +25,7 @@ public class HDFSUtils {
         FileStatus fileStatus = fs.getFileStatus(path);
          if (fileStatus.isDirectory()) {
              ContentSummary contentSummary = fs.getContentSummary(path);
-             return contentSummary.getFileCount() + contentSummary.getDirectoryCount() == 0;
+             return contentSummary.getFileCount() == 0;
          } else {
              return false;
          }

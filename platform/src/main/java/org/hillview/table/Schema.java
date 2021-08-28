@@ -18,6 +18,9 @@
 package org.hillview.table;
 
 import com.google.gson.*;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
+import org.apache.hadoop.fs.FileSystem;
 import org.hillview.dataset.api.IJson;
 import org.hillview.table.api.ContentsKind;
 import org.hillview.table.api.IAppendableColumn;
@@ -329,6 +332,17 @@ public class Schema implements IJson {
             String text = this.toJson();
             byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
             Files.write(file, bytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    public void writeToJsonFile(FileSystem fs, org.apache.hadoop.fs.Path file) {
+        try {
+            String text = this.toJson();
+            byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
+            FSDataOutputStream outputStream = fs.create(file, true);
+            outputStream.write(bytes);
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }

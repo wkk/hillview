@@ -17,6 +17,9 @@
 
 package org.hillview.sketches;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.hillview.dataset.api.Empty;
 import org.hillview.dataset.api.TableSketch;
 import org.hillview.storage.CsvFileWriter;
@@ -26,15 +29,12 @@ import org.hillview.storage.ParquetFileWriter;
 import org.hillview.table.Schema;
 import org.hillview.table.api.ITable;
 import org.hillview.utils.Converters;
+import org.hillview.utils.HDFSUtils;
 import org.hillview.utils.HillviewLogger;
 import org.hillview.utils.Utilities;
 
 import javax.annotation.Nullable;
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 
 /**
@@ -75,9 +75,11 @@ public class SaveAsFileSketch implements TableSketch<Empty> {
 
             // Executed for side-effect.
             data.getLoadedColumns(data.getSchema().getColumnNames());
-            File file = new File(this.folder);
+            Path basePath = new Path(this.folder);
+            Configuration conf = HDFSUtils.getDefaultHadoopConfiguration();
+            FileSystem fs = basePath.getFileSystem(conf);
             @SuppressWarnings("unused")
-            boolean ignored = file.mkdir();
+            boolean ignored = fs.mkdirs(basePath);
             // There is a race here: multiple workers may try to create the
             // folder at the same time, so we don't bother if the creation fails.
             // If the folder can't be created the writing below will fail.
@@ -86,7 +88,7 @@ public class SaveAsFileSketch implements TableSketch<Empty> {
             if (tableFile == null)
                 throw new RuntimeException("I don't know how to generate file names for the data");
             String baseName = Utilities.getBasename(tableFile);
-            String path = Paths.get(this.folder, baseName + "." + kind).toString();
+            String path = new Path(basePath, String.format("%s.%s", baseName, kind)).toString();
             HillviewLogger.instance.info("Writing data to files", "{0}", path);
             ITableWriter writer;
             switch (kind) {
@@ -109,15 +111,15 @@ public class SaveAsFileSketch implements TableSketch<Empty> {
 
             if (this.createSchema) {
                 String schemaFile = baseName + ".schema";
-                Path schemaPath = Paths.get(this.folder, schemaFile);
+                Path schemaPath = new Path(basePath, schemaFile);
                 Schema toWrite = data.getSchema();
-                toWrite.writeToJsonFile(schemaPath);
-                Path finalSchemaPath = Paths.get(this.folder, Schema.schemaFileName);
+                toWrite.writeToJsonFile(fs, schemaPath);
+                Path finalSchemaPath = new Path(basePath, Schema.schemaFileName);
                 // Attempt to atomically rename the schema; this is also a race which
                 // may be won by multiple participants.  Hopefully all the schemas
                 // written should be identical, so it does not matter if this happens
                 // many times.
-                Files.move(schemaPath, finalSchemaPath, StandardCopyOption.ATOMIC_MOVE);
+                fs.rename(schemaPath, finalSchemaPath);
             }
             return this.zero();
         } catch (IOException e) {
@@ -139,6 +141,6 @@ public class SaveAsFileSketch implements TableSketch<Empty> {
 
     @Override
     public String toString() {
-        return Paths.get(this.folder,  "*." + kind).toString();
+        return new Path(this.folder,  "*." + kind).toString();
     }
 }
